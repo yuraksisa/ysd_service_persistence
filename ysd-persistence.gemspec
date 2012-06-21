@@ -9,4 +9,6 @@ Gem::Specification.new do |s|
   s.summary = "Persistence system"
   
   s.add_runtime_dependency "mongo"
+  
+  s.add_runtime_dependency "ysd_md_comparison"
 end
