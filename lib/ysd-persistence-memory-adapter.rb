@@ -101,7 +101,7 @@ module Persistence
       #   the number of elements that match the query
       # 
       def count(query)
-        query.filter_records(@records[query.model.storage_name].values.dup).length
+        read(query).length
       end
         
     end #MemoryAdapter

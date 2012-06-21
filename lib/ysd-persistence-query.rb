@@ -1,3 +1,4 @@
+require 'ostruct'
 module Persistence
   #
   # Represents a model query against a repository
@@ -30,7 +31,19 @@ module Persistence
     # @param [Repository] repository
     # @param [Model] model
     # @param [Hash] options
-    #   {:fields=>[:type,:language,:title], :conditions=>{:language=>'es',:type=>'page'}, :order=>[[:title,:asc]], :limit=>1}
+    #
+    #   :fields       Array which contains the field names which the query will retrieve
+    #   :conditions   An instance of comparison
+    #   :order        An array of arrays. The internal array contains two elements, the field and the order (:asc or :desc)
+    #   :limit        The number of elements to retrieve  (Used in pagination)
+    #   :offset       The index of the first element      (Used in pagination)
+    #
+    #   {:fields=>[:type,:language,:title], 
+    #    :conditions=>Conditions::JoinComparison.new('$and', 
+    #                    [Conditions::Comparison.new(:language, '$eq', 'es'),
+    #                     Conditions::Comparison.new(:type, '$eq','page')]) 
+    #    :order=>[[:title,:asc]], 
+    #    :limit=>1}
     #
     def initialize(repository, model, options={})
     
@@ -40,7 +53,7 @@ module Persistence
       options = process_hash(options)
 
       @fields = options[:fields]?(options[:fields].dup.freeze):[]
-      @conditions = options[:conditions]?(options[:conditions].dup.freeze):{}   
+      @conditions = options[:conditions]?(options[:conditions]):nil   
       @order = options[:order]?(options[:order].dup.freeze):[] 
       @limit = options[:limit]
       @offset = options[:offset] || 0
@@ -91,42 +104,16 @@ module Persistence
     #  matched records
     #
     def match_records(records)
-      
+            
       records.select do |record|
         
-        return_value = true
+        #puts "checking record #{record.class.name} #{record.inspect} #{conditions.inspect}"
         
-        conditions.each do |key, value|
-        
-          if value.kind_of?(Array)
-            if record[:metadata][key.to_sym].kind_of?(Array)
-              if (record[:metadata][key.to_sym] & value).length == 0
-                return_value = false
-                break
-              end
-            else 
-              if value.index(record[:metadata][key.to_sym]).nil?
-                return_value = false
-                break
-              end
-            end
-          else 
-            if record[:metadata][key.to_sym].kind_of?(Array)
-              puts "record : #{record[:metadata][:categories].to_json} key: #{key.to_sym} value:#{value} #{value.class.name}"
-              if record[:metadata][key.to_sym].index(value).nil?
-                return_value = false
-                break
-              end
-            else    
-              if record[:metadata][key.to_sym] != value
-                return_value = false
-                break
-              end
-            end
-          end
-          
-        end
-    
+        return_value = if conditions
+                         conditions.check(OpenStruct.new(record[:metadata]))
+                       else
+                         true
+                       end    
         return_value
         
       end
@@ -152,7 +139,7 @@ module Persistence
           if x[:metadata][order_element.first] == y[:metadata][order_element.first]
             next
           else
-            value = (order_element.last == :asc)? x[:metadata][order_element.first] <=> y[:metadata][order_element.first] : y[:metadata][order_element.first] <=> x[:metadata][order_element.first]
+            value = (order_element.last.to_sym == :desc)? x[:metadata][order_element.first] <=> y[:metadata][order_element.first] : y[:metadata][order_element.first] <=> x[:metadata][order_element.first]
             break
           end
                   

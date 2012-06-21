@@ -29,10 +29,21 @@ module Persistence
     
     # Search for this model resources
     #
-    #  :conditions => Hash with the conditions
-    #  :order => Array with the order [key, order]
-    #  :limit =>
-    #  :offset =>
+    # @params [Hash] options
+    #
+    #  It's a hash which contains the query options
+    #
+    #    :conditions => Instance of Conditions::AbstractComparison
+    #    :order => Array with the order [key, order]
+    #    :limit =>
+    #    :offset =>
+    #
+    #  Examples:
+    #
+    #     MyEntity.all  # Retrieve all the instances
+    #     MyEntity.all({:conditions => Conditions::Comparison(:name, '$eq', 'Mary')}) # Retrieve instance which name is 'Mary'
+    #
+    #  See Persistence::Query for more information about howto build the query
     #
     def all(options={})
       query = Query.new(repository, self, options)

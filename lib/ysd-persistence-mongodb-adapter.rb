@@ -92,6 +92,8 @@ module Persistence
          # Build the conditions 
          conditions = build_conditions(query.conditions)
          
+         puts "mongodb querying ... (#{query.model}) : #{conditions.inspect}"
+         
          # Build the options
          q_options = {}
          add_fields!(q_options, query.fields)
@@ -128,42 +130,14 @@ module Persistence
        
        end
   
-      
-  
-       # --------------------------------------------
-  
-       #
-       # Updates a set of resources
-       #
-#       def update(model, selector, attributes, opts={})
-#  
-#         with_connection do |connection|
-#      
-#           database = connection.db(options[:database])
-#           database[model.storage_name].update(selector, { "$set" => attributes }, opts)
-#    
-#         end  
-#  
-#       end
-  
-       #
-       # Deletes a set of resources
-       #
-#       def delete(model, selector, opts={})
-#  
-#         with_connection do |connection|
-#           database = connection.db(options[:database])
-#           database[model.storage_name].remove(selector, opts)
-#         end
-#  
-#       end         
- 
        private
  
        # Build the conditions from the query conditions
        #
        def build_conditions(conditions)
-         return conditions
+         
+         conditions.build_mongodb if conditions
+         
        end
  
        # Add the fields
