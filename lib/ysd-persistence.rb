@@ -7,6 +7,8 @@ require 'ysd-persistence-model'
 require 'ysd-persistence-model-property'
 require 'ysd-persistence-query'
 require 'ysd-persistence-property'
+require 'support/ysd-persistence-logger'
+require 'logger'
 
 #
 #  Configure a repository
@@ -57,5 +59,8 @@ module Persistence
     end
   
   end
+  
+  # Assign the default logger
+  Persistence.logger= Logger.new(StringIO.new).level = Logger::FATAL
 
 end

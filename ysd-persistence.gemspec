@@ -11,4 +11,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "mongo"
   
   s.add_runtime_dependency "ysd_md_comparison"
+  s.add_runtime_dependency "ysd_md_logger"      # Logger system
+  s.add_runtime_dependency "ysd_md_system"
+  
 end

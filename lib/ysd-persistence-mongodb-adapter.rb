@@ -1,4 +1,6 @@
-require 'mongo'
+require 'mongo' unless defined?Mongo::Connection
+require 'ysd_md_logger' unless defined?Model::Logger
+require 'ysd_md_system' unless defined?YSDModel::System::Chrono
 
 module Persistence
   module Adapters
@@ -6,7 +8,8 @@ module Persistence
     # MongoDB adapter
     #
     class MongodbAdapter < AbstractAdapter
- 
+       include YSDModel::System::Chrono
+       
        # Initialize
        #
        def initialize(name, options)
@@ -20,18 +23,26 @@ module Persistence
        #
        def create(resource, opts={})
             
-          with_connection do |connection|
-      
-            database = connection.db(options[:database])      
-            
-            attributes = resource.attributes.dup
-            if not resource['_id']
-              attributes.merge!({'_id' => resource.key}) 
-            end
-            
-            document = database[resource.model.storage_name].insert(attributes, opts.merge(:safe => true))
+          result, duration_ms = execute_and_chrono do 
+          
+            with_connection do |connection|
+              begin
+                database = connection.db(options[:database])      
+                attributes = resource.attributes.dup
+                if not resource['_id']
+                  attributes.merge!({'_id' => resource.key}) 
+                end
+                document = database[resource.model.storage_name].insert(attributes, opts.merge(:safe => true))
+              rescue
+                Persistence.logger.fatal('Persistence') {"ERROR INSERTING #{resource.model} #{$!}"} if Persistence.logger
+                raise 
+              end 
+    
+            end            
     
           end
+          
+          Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) INSERT #{resource.model}"} if Persistence.logger
       
        end
   
@@ -40,14 +51,23 @@ module Persistence
        #
        def update(resource, opts={})
   
-         with_connection do |connection|
-    
-           database = connection.db(options[:database])
-           database[resource.model.storage_name].update({'_id' => resource['_id'] || resource.key}, resource.attributes, opts.merge(:safe => true))  
-           # TODO : Analizar la respuesta de la actualizacion [Hash] ( key "n" indica el numero de operaciones)
-         
+         id = resource['_id'] || resource.key
+  
+         result, duration_ms = execute_and_chrono do
+           with_connection do |connection|
+             begin
+               database = connection.db(options[:database])
+               database[resource.model.storage_name].update({'_id' => id}, resource.attributes, opts.merge(:safe => true))  
+               # TODO : Analizar la respuesta de la actualizacion [Hash] ( key "n" indica el numero de operaciones)
+             rescue
+                Persistence.logger.fatal('Persistence') {"ERROR UPDATING #{resource.model} #{id} #{$!}"} if Persistence.logger
+                raise                             
+             end
+           end
          end
-      
+
+         Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) UPDATE #{resource.model} #{id}"} if Persistence.logger      
+         
          resource
       
        end
@@ -57,14 +77,23 @@ module Persistence
        #
        def delete(resource, opts={})
        
-         with_connection do |connection|
-        
-           database = connection.db(options[:database])
-           database[resource.model.storage_name].remove({'_id' => resource['_id'] || resource.key}, opts.merge(:safe => true))
-           # TODO : Analizar la respuesta de la actualizacion [Hash] ( key "n" indica el numero de operaciones)
-      
-         end       
+         id = resource['_id'] || resource.key
        
+         result, duration_ms = execute_and_chrono do
+           with_connection do |connection|
+             begin
+               database = connection.db(options[:database])
+               database[resource.model.storage_name].remove({'_id' => id}, opts.merge(:safe => true))
+               # TODO : Analizar la respuesta de la actualizacion [Hash] ( key "n" indica el numero de operaciones)
+             rescue
+                Persistence.logger.fatal('Persistence') {"ERROR DELETING #{resource.model} #{id} #{$!}"} if Persistence.logger
+                raise                             
+             end
+           end
+         end       
+
+         Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) DELETE #{resource.model} #{resource['_id']}"} if Persistence.logger       
+
        end  
     
        # ---- Retrieving information methods ---------------------------------
@@ -72,12 +101,22 @@ module Persistence
        # Get a resource by its id
        #
        def get(model, id, opts={})                 
+         
          result = nil
          
-         with_connection do |connection|
-           database = connection.db(options[:database])     
-           result = database[model.storage_name].find_one({:_id => id}, opts) 
+         result, duration_ms = execute_and_chrono do
+           with_connection do |connection|
+             begin
+               database = connection.db(options[:database])     
+               result = database[model.storage_name].find_one({:_id => id}, opts) 
+             rescue
+                Persistence.logger.fatal('Persistence') {"ERROR FINDING #{model} #{id} #{$!}"} if Persistence.logger
+                raise                             
+             end
+           end           
          end
+
+         Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) FIND ONE #{model} #{id}"} if Persistence.logger
        
          if result
            {:path => model.build_path(result['_id']), :metadata => result}
@@ -92,8 +131,6 @@ module Persistence
          # Build the conditions 
          conditions = build_conditions(query.conditions)
          
-         puts "mongodb querying ... (#{query.model}) : #{conditions.inspect}"
-         
          # Build the options
          q_options = {}
          add_fields!(q_options, query.fields)
@@ -101,13 +138,21 @@ module Persistence
          add_limit_offset!(q_options, query.limit, query.offset)
                           
          # Query         
-         result = []
-         with_connection do |connection|
-           database = connection.db(options[:database])    
-           result = database[query.model.storage_name].find(conditions, q_options).to_a.map do |element|
-             {:path => query.model.build_path(element['_id'].to_s), :metadata => element }
-           end 
-         end       
+         result, duration_ms = execute_and_chrono do 
+           with_connection do |connection|
+             begin
+               database = connection.db(options[:database])    
+               database[query.model.storage_name].find(conditions, q_options).to_a.map do |element|
+                 {:path => query.model.build_path(element['_id'].to_s), :metadata => element }
+               end
+             rescue
+                Persistence.logger.fatal('Persistence') {"ERROR QUERYING #{resource.model} #{conditions.inspect if conditions} #{$!}"} if Persistence.logger
+                raise                             
+             end                
+           end           
+         end
+         
+         Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) QUERY in #{query.model} #{conditions.inspect if conditions}"} if Persistence.logger       
          
          result
                      
@@ -121,10 +166,20 @@ module Persistence
          conditions = build_conditions(query.conditions)
          
          num_of_docs = 0
-         with_connection do |connection|
-           database = connection.db(options[:database])
-           num_of_docs = database[query.model.storage_name].count({:query => conditions})
+         
+         num_of_docs, duration_ms = execute_and_chrono do 
+           with_connection do |connection|
+             begin
+               database = connection.db(options[:database])
+               num_of_docs = database[query.model.storage_name].count({:query => conditions})
+             rescue
+                Persistence.logger.fatal('Persistence') {"ERROR COUNTING #{resource.model} #{conditions.inspect if conditions} #{$!}"} if Persistence.logger
+                raise              
+             end
+           end
          end
+         
+         Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) COUNTING in #{query.model} #{conditions.inspect if conditions}"} if Persistence.logger
          
          num_of_docs
        
@@ -194,11 +249,23 @@ module Persistence
        #
        def open_connection
      
-         connection = Mongo::Connection.new(options[:host], options[:port])
-         connection.add_auth(options[:database], options[:username], options[:password])
-         connection.apply_saved_authentication
+         connection, duration_ms = execute_and_chrono do
+           
+           begin
+             connection = Mongo::Connection.new(options[:host], options[:port])
+             connection.add_auth(options[:database], options[:username], options[:password])
+             connection.apply_saved_authentication
+             connection
+           rescue
+             Persistence.logger.fatal('Persistence') {" (#{duration_ms}) ERROR GETTING MongoDB CONNECTION"} if Persistence.logger
+             raise
+           end
+           
+         end
     
-         return connection
+         #Persistence.logger.debug('Persistence') {" (#{'%1.5f' % duration_ms}) GETTING MongoDB CONNECTION"} if Persistence.logger
+    
+         connection
   
        end
   
