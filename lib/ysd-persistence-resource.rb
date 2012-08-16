@@ -59,6 +59,11 @@ module Persistence
       @metadata
     end
     
+    # Retrieve all the exportable attributes
+    def exportable_attributes
+      attributes.clone
+    end
+    
     # Updates the attributes (more than one a time)
     def attributes=(data)
       @metadata.merge!(model.process_hash(data))
@@ -113,8 +118,18 @@ module Persistence
       defined?(@repository) ? @repository : model.repository
     end
     
+    #
+    # Check if the Resource instance is new
+    #
+    def new?
+      not defined?@repository
+    end
+    
+    #
+    # Gets a json representation of the resource
+    #
     def to_json(options={})
-      @metadata.merge({:key => key}).to_json
+      exportable_attributes.merge({:key => key}).to_json
     end
   
   end
