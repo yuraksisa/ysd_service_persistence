@@ -1,3 +1,4 @@
+require 'stringio' unless defined?StringIO
 require 'ysd-persistence-support'
 require 'ysd-persistence-repository'
 require 'ysd-persistence-adapters'
