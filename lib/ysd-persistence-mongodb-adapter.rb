@@ -1,6 +1,5 @@
 require 'mongo' unless defined?Mongo::Connection
-require 'ysd_md_logger' unless defined?Model::Logger
-require 'ysd_md_system' unless defined?YSDModel::System::Chrono
+require 'ysd_md_system' unless defined?Model::System::Chrono
 
 module Persistence
   module Adapters
@@ -8,7 +7,7 @@ module Persistence
     # MongoDB adapter
     #
     class MongodbAdapter < AbstractAdapter
-       include YSDModel::System::Chrono
+       include Model::System::Chrono
        
        # Initialize
        #
