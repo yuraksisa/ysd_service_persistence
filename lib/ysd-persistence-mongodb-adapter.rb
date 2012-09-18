@@ -7,7 +7,7 @@ module Persistence
     # MongoDB adapter
     #
     class MongodbAdapter < AbstractAdapter
-       include Model::System::Chrono
+       include ::Model::System::Chrono
        
        # Initialize
        #
