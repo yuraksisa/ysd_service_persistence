@@ -11,6 +11,11 @@ require 'ysd-persistence-property'
 require 'support/ysd-persistence-logger'
 require 'logger'
 
+require 'property/ysd-persistence-property-object'
+require 'property/ysd-persistence-property-integer'
+require 'property/ysd-persistence-property-datetime'
+require 'property/ysd-persistence-property-string'
+
 #
 #  Configure a repository
 #
@@ -61,7 +66,8 @@ module Persistence
   
   end
   
-  # Assign the default logger
-  Persistence.logger= Logger.new(StringIO.new).level = Logger::FATAL
-
 end
+
+# Assign the default logger
+Persistence.logger= ::Logger.new($stdout)
+Persistence.logger.level = Logger::FATAL

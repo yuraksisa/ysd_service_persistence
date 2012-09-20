@@ -122,7 +122,8 @@ module Persistence
         resource = self.allocate # Method of the Class Ruby class    
        
         resource.instance_variable_set(:@path, loaded_resource[:path])
-        resource.instance_variable_set(:@metadata, process_hash(loaded_resource[:metadata]))
+        resource.instance_variable_set(:@metadata, {})
+        resource.attributes=loaded_resource[:metadata]
         resource.instance_variable_set(:@repository, repository )
       
         resource

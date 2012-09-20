@@ -36,13 +36,19 @@ module Persistence
     
     # Initializes a new instance of this resource using the uri and metadata
     #
-    def initialize(key, metadata={})
+    def initialize(key, data={})
+       
       @path = model.build_path(key)
       @metadata = {}
+      
+      # Store the properties defined in the model in the metadata
       properties.each do |property_name, property|
         @metadata.store(property.name, '')
       end
-      @metadata.merge!(model.process_hash(metadata))      
+      
+      # Assign the values
+      self.attributes=(data)
+            
     end
     
     # ----- Dynamic resource attributes ----
@@ -66,7 +72,13 @@ module Persistence
     
     # Updates the attributes (more than one a time)
     def attributes=(data)
-      @metadata.merge!(model.process_hash(data))
+      
+      model.process_hash(data).each do |key, value|
+        attribute_set(key, value)
+      end
+      
+      @metadata
+      
     end
                 
     # Retrieves an attribute value
@@ -75,14 +87,30 @@ module Persistence
     # 
     # @return the attribute value
     def attribute_get(name)
-      @metadata[name.to_sym]
+      
+      name = name.to_sym
+       
+      if properties.has_key?(name)
+        properties[name].get(self)
+      else
+        nil
+      end
+      
     end
     
     alias_method :[], :attribute_get
     
     # Sets an attribute value
     def attribute_set(name, value)
-      @metadata[name.to_sym] = value
+    
+      name = name.to_sym
+      
+      if properties.has_key?(name)
+        properties[name].set(self, value)
+      else
+        @metadata[name] = value
+      end
+        
     end
     
     alias_method :[]=, :attribute_set

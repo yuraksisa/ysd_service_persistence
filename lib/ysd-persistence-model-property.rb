@@ -10,7 +10,7 @@ module Persistence
       def self.extended(model)
         model.instance_variable_set(:@properties, {})
       end
-      
+            
       # Define a model property
       #
       # @param [Symbol] name
@@ -22,7 +22,15 @@ module Persistence
       #
       def property(name, type=nil, options={})
 
-        property = Property.new(self, name, options)
+        # if the type can be found within Property then
+        # use that class rather than the primitive
+        type ||= Object
+        unless property_class = Persistence::Property.determine_class(type)
+          raise ArgumentError, "+type+ was #{type.inspect}, which is not a supported type"
+        end
+
+        property = property_class.new(self, name, options)
+        
         properties.store(name, property)
               
         # add the property to the child classes only if the property was
@@ -74,8 +82,7 @@ module Persistence
         reader = <<-RUBY
           #{reader_visibility}
           def #{name}
-            #{instance_variable_name} if defined?(#{instance_variable_name})
-            #{instance_variable_name} = attribute_get(:#{name})
+            attribute_get(:#{name})
           end
         RUBY
         
