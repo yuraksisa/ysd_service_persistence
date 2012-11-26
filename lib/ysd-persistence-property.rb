@@ -22,7 +22,7 @@ module Persistence
     
     def initialize(model, name, options)
       @model = model
-      @name = name
+      @name = name.to_sym
       @instance_variable_name = "@#{@name}".freeze
       @options = options
       
@@ -47,7 +47,7 @@ module Persistence
     # @return [Object]
     #
     def get(resource)
-      resource.instance_variable_get(:@metadata).fetch(instance_variable_name)
+      resource.instance_variable_get(:@metadata).fetch(name, nil)
     end
     
     #
@@ -59,7 +59,7 @@ module Persistence
     # @return [Object]
     #
     def set(resource, value)
-      resource.instance_variable_get(:@metadata).store(instance_variable_name, typecast(value))
+      resource.instance_variable_get(:@metadata).store(name, typecast(value))
     end
   
     #

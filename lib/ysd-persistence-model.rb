@@ -50,6 +50,13 @@ module Persistence
       repository.read(query)
     end
     
+    #
+    # Search the first occurrence
+    #
+    def first(options={})
+      all(options.merge({:limit => 1})).first
+    end
+    
     # Count this model resources
     #
     #
@@ -118,12 +125,19 @@ module Persistence
     def load(resources)
          
       resources.map do |loaded_resource|
-    
+                           
+        metadata = {}
+        loaded_resource[:metadata].each do |property_name, value|
+          if properties.has_key?(property_name)
+            metadata.store(property_name.to_sym, properties[property_name].typecast(value))
+          else
+            metadata.store(property_name.to_sym, value)
+          end
+        end
+               
         resource = self.allocate # Method of the Class Ruby class    
-       
         resource.instance_variable_set(:@path, loaded_resource[:path])
-        resource.instance_variable_set(:@metadata, {})
-        resource.attributes=loaded_resource[:metadata]
+        resource.instance_variable_set(:@metadata, metadata)
         resource.instance_variable_set(:@repository, repository )
       
         resource

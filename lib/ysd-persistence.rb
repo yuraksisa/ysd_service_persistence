@@ -1,4 +1,5 @@
 require 'stringio' unless defined?StringIO
+require 'support/ysd-persistence-hook'
 require 'ysd-persistence-support'
 require 'ysd-persistence-repository'
 require 'ysd-persistence-adapters'
@@ -6,6 +7,7 @@ require 'adapters/ysd-persistence-abstract-adapter'
 require 'ysd-persistence-resource'
 require 'ysd-persistence-model'
 require 'ysd-persistence-model-property'
+require 'ysd-persistence-model-hook'
 require 'ysd-persistence-query'
 require 'ysd-persistence-property'
 require 'support/ysd-persistence-logger'
